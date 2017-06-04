@@ -5,7 +5,7 @@ import sys
 import random
 
 output_dir = './my_faces'
-size = 300
+size = 64
 
 if not os.path.exists(output_dir):
     os.makedirs(output_dir)
@@ -29,7 +29,7 @@ detector = dlib.get_frontal_face_detector()
 camera = cv2.VideoCapture(0)
 
 index = 1
-while index <= 10:
+while index <= 1000:
     print('Being processed picture %s' % index)
     # 从摄像头读取照片
     success, img = camera.read()
@@ -48,7 +48,7 @@ while index <= 10:
         face = relight(face, random.uniform(0.5, 1.5), random.randint(-50, 50))
         face = cv2.resize(face, (size,size))
         cv2.imshow('image', face)
-        cv2.imwrite(output_dir+'/'+str(index)+'.jpg', face)
+        cv2.imwrite(output_dir+'/'+str(100+index)+'.jpg', face)
         index += 1
     # 检测ESC按键
     key = cv2.waitKey(30) & 0xff

@@ -30,15 +30,18 @@ class NeuralNet(object):
     def feedforward(self, x):
         for b, w in zip(self.b_, self.w_): # 每次取一对b和w，这个函数仅用于最后的求值使用
             x = self.sigmoid(np.dot(w, x)+b)
+        # 假设输入x是一个 [2*1]，那么 x = [3*2] * [2*1] + [3*1] ===>>> 最后得到一个[5*1]
         return x
 
+    # 核心算法，后向传播算法
     def backprop(self, x, y):
         nabla_b = [np.zeros(b.shape) for b in self.b_]
         nabla_w = [np.zeros(w.shape) for w in self.w_]
+        # 同理构造几个矩阵，只不过它们的初值都是0
 
-        # 正向传播将a全部求出来
+        # 正向传播将a，z全部求出来
         activation = x
-        activations = [x]
+        activations = [activation]
         zs = []
         for b, w in zip(self.b_, self.w_):
             z = np.dot(w, activation)+b
@@ -47,24 +50,28 @@ class NeuralNet(object):
             activations.append(activation)
 
         delta = self.cost_derivative(activations[-1], y) * self.sigmoid_prime(zs[-1])
+        # 最后乘上的那个项也可以写成 self.sigmoid(a[-1]) * (1 - self.sigmoid(a[-1]))
+
+        # 这些delta一共有layer-1个层，每个都被保存在b中
         nabla_b[-1] = delta
         nabla_w[-1] = np.dot(delta, activations[-2].transpose())
 
         for l in range(2, self.num_layers_):
             z = zs[-l]
             sp = self.sigmoid_prime(z)
-            delta = np.dot(self.w_[-l+1].transpose(), delta) * sp
+            delta = np.dot(self.w_[-l+1].transpose(), delta) * sp # 后向传播算法求得delta并保存
             nabla_b[-l] = delta
-            nabla_w[-l] = np.dot(delta, activations[-l-1].transpose())
-        return (nabla_b, nabla_w)
+            nabla_w[-l] = np.dot(delta, activations[-l-1].transpose()) # 这个w实际保存了一个每次的增量
+        return (nabla_b, nabla_w) # 这个就是那个导数
 
-    def update_mini_batch(self, mini_batch, eta):
+    def update_mini_batch(self, mini_batch, eta): # mini_batch是每次训练的大小
         nabla_b = [np.zeros(b.shape) for b in self.b_]
         nabla_w = [np.zeros(w.shape) for w in self.w_]
         for x, y in mini_batch:
-            delta_nabla_b, delta_nabla_w = self.backprop(x, y)
+            delta_nabla_b, delta_nabla_w = self.backprop(x, y) # 得到的是每组数据造成的增量
             nabla_b = [nb+dnb for nb, dnb in zip(nabla_b, delta_nabla_b)]
             nabla_w = [nw+dnw for nw, dnw in zip(nabla_w, delta_nabla_w)]
+        # 最后的nabla是导数
         self.w_ = [w-(eta/len(mini_batch))*nw for w, nw in zip(self.w_, nabla_w)]
         self.b_ = [b-(eta/len(mini_batch))*nb for b, nb in zip(self.b_, nabla_b)]
 
@@ -102,7 +109,6 @@ class NeuralNet(object):
     def load(self):
         pass
 
-
 def load_mnist(dataset="training_data", digits=np.arange(10), path="."):
 
     if dataset == "training_data":
@@ -124,19 +130,19 @@ def load_mnist(dataset="training_data", digits=np.arange(10), path="."):
     img = pyarray("B", fimg.read())
     fimg.close()
 
-    ind = [ k for k in range(size) if lbl[k] in digits ]
+    ind = [k for k in range(size) if lbl[k] in digits]
     N = len(ind)
 
     images = zeros((N, rows, cols), dtype=uint8)
     labels = zeros((N, 1), dtype=int8)
     for i in range(len(ind)):
-        images[i] = array(img[ ind[i]*rows*cols : (ind[i]+1)*rows*cols ]).reshape((rows, cols))
+        images[i] = array(img[ind[i]*rows*cols : (ind[i]+1)*rows*cols ]).reshape((rows, cols))
         labels[i] = lbl[ind[i]]
     return images, labels
 
 def load_samples(dataset="training_data"):
-    image,label = load_mnist(dataset)
-    X = [np.reshape(x,(28*28, 1)) for x in image]
+    image, label = load_mnist(dataset)
+    X = [np.reshape(x, (28*28, 1)) for x in image]
     X = [x/255.0 for x in X]   # 灰度值范围(0-255)，转换为(0-1)
 
     # 5 -> [0,0,0,0,0,1.0,0,0,0];  1 -> [0,1.0,0,0,0,0,0,0,0]
@@ -149,7 +155,7 @@ def load_samples(dataset="training_data"):
         Y = [vectorized_Y(y) for y in label]
         pair = list(zip(X, Y))
         return pair
-    elif dataset == 'testing_data':
+    elif dataset == 'testing_data': # test的话，就不用将label转化成向量的形式
         pair = list(zip(X, label))
         return pair
     else:
